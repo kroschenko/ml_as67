@@ -2,17 +2,23 @@ import pandas as pd
 import numpy as np
 from scipy import stats
 import matplotlib.pyplot as plt
+from typing import Literal
 
-def find_max_fliers_column(df : pd.DataFrame) -> tuple[int, int]:
+def find_min_max_fliers_column(df : pd.DataFrame, mode : Literal['max', 'min']) -> tuple[int, int]:
     fig, ax = plt.subplots()
     box_plot = ax.boxplot(
         df, 
         tick_labels=df.columns.to_list()
     )
     outlier_counts : list[int] = [len(fliers.get_ydata()) for fliers in box_plot['fliers']]
-    fliers_max_column : int = int(np.argmax(outlier_counts))
+    fliers_column : int 
+    if mode == 'max':
+        fliers_column : int = int(np.argmax(outlier_counts))
+    elif mode == 'min':
+        fliers_column : int = int(np.argmin(outlier_counts))
+    
     plt.close()
-    return fliers_max_column, outlier_counts[fliers_max_column]
+    return fliers_column, outlier_counts[fliers_column]
 
 def main() -> None:
     try:
@@ -42,7 +48,7 @@ def main() -> None:
         """Построение столбчатой диаграммы количества вин каждой категории качества"""
         np.random.seed(34)
         colors : np.ndarray = np.random.uniform(15, 80, len(wine_quality['fixed acidity']))
-        fig, (ax1, ax2) = plt.subplots(nrows=1, ncols=2)
+        fig, (ax1, ax2, ax3) = plt.subplots(nrows=1, ncols=3)
         fig.canvas.manager.set_window_title("Визуализация характеристик проб вин") # type: ignore
         ax1.bar(qual_labels, 
                 quantity_of_qualities.values, 
@@ -83,8 +89,15 @@ def main() -> None:
                                         select_dtypes(include='number')
         )
         # Нахождение колонки с максимальным количеством выбросов
-        max_fliers_column, count = find_max_fliers_column(numeric_col)
-        print(f"Величина '{wine_quality.columns[max_fliers_column]}' имеет наибольшее количество выбросов: {count}")
+        max_fliers_column, count = find_min_max_fliers_column(numeric_col, 'max')
+        min_fliers_column, min_count = find_min_max_fliers_column(numeric_col, 'min')
+        max_flaiers_col_name : str = numeric_col.columns[max_fliers_column]
+        min_fliers_col_name : str = numeric_col.columns[min_fliers_column]
+        ax3.boxplot(pd.DataFrame({max_flaiers_col_name: wine_quality[max_flaiers_col_name], min_fliers_col_name: wine_quality[min_fliers_col_name]}))
+        ax3.set_title("Показатели с наименьшим и наибольшим количестом выбросов")
+        ax3.set_xticklabels([max_flaiers_col_name, min_fliers_col_name])
+        print(f"Величина '{max_flaiers_col_name}' имеет наибольшее количество выбросов: {count}")
+        print(f"Величина '{min_fliers_col_name}' имеет наименьшее количество выбросов: {min_count}")
 
         plt.show()
         # Стандартизация числовых значений
