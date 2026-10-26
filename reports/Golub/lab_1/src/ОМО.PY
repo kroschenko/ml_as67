@@ -1,0 +1,40 @@
+import matplotlib.pyplot as plt
+import numpy as np
+import pandas as pd
+
+plt.rcParams["figure.figsize"] = (10, 6)
+df = pd.read_csv("Titanic-Dataset.csv")
+print("   1. Первые 5 строк датасета ")
+print(df.head())
+print("\n   2. Информация о типах столбцов (.info()) ")
+df.info()
+print("\n   3. Статистические показатели (.describe()) ")
+print(df.describe().T[["mean", "50%", "std"]])
+missing_values = df.isnull().sum()
+print("\n   4. Проверка пропусков ")
+print(missing_values)
+df["Age"] = df["Age"].fillna(df["Age"].median())
+print("Пропуски в Age обработаны.")
+df["FamilySize"] = df["SibSp"] + df["Parch"]
+df_encoded = pd.get_dummies(df, columns=["Sex", "Embarked"], drop_first=False, dtype=int)
+numeric_features = ["Age", "Fare", "FamilySize", "Pclass"]
+df_scaled = df_encoded.copy()
+df_scaled[numeric_features] = (
+    df_encoded[numeric_features] - df_encoded[numeric_features].mean()
+) / df_encoded[numeric_features].std()
+print("\nСтатистика после стандартизации (mean ≈ 0, std = 1):")
+print(df_scaled[numeric_features].describe().T[["mean", "std"]])
+fig, ax = plt.subplots(figsize=(8, 5))
+survived_counts = df["Survived"].value_counts()
+bars = ax.bar(["Погибли (0)", "Выжили (1)"], survived_counts, color=["#e74c3c", "#2ecc71"])
+ax.set_title("Количество выживших и погибших пассажиров", fontsize=14, fontweight="bold")
+ax.set_ylabel("Количество пассажиров")
+ax.grid(axis="y", linestyle="--", alpha=0.7)
+plt.show()
+fig, ax = plt.subplots(figsize=(9, 5))
+ax.hist(df["Age"], bins=20, color="#3498db", edgecolor="black", alpha=0.85)
+ax.set_title("Распределение возрастов пассажиров", fontsize=14, fontweight="bold")
+ax.set_xlabel("Возраст")
+ax.set_ylabel("Частота")
+ax.grid(axis="y", linestyle="--", alpha=0.7)
+plt.show()
