@@ -3,7 +3,6 @@ import torch
 import torch.nn as nn
 from torch.utils.data import TensorDataset, DataLoader
 
-from sklearn.preprocessing import MinMaxScaler
 from sklearn.metrics import root_mean_squared_error, r2_score
 import matplotlib.pyplot as plt
 
@@ -16,8 +15,8 @@ class ForecastingMLP(nn.Module):
     def __init__(self, input_size=6, hidden_size=2, output_size=1):
         super().__init__()
         self.forecasting_mlp = nn.Sequential(
-            nn.Sigmoid(),
             nn.Linear(input_size, hidden_size),
+            nn.Sigmoid(),
             nn.Linear(hidden_size, output_size)
         )
 
@@ -38,18 +37,15 @@ def solution() -> None:
     x = np.arange(0, 50, 0.1, dtype=np.float32)
     y = (0.4 * np.cos(0.4 * x) + 0.08 * np.sin(0.4 * x)).astype(np.float32)
 
-    scaler_y = MinMaxScaler(feature_range=(-1, 1))
-
-
     train_size : int = int(len(y)*0.8)
-    scaler_y.fit(y[:train_size].reshape(-1, 1))
-    y_scaled = scaler_y.transform(y.reshape(-1, 1)).ravel().astype(np.float32)
 
-    X_all, Y_all = make_windows(y_scaled, WINDOW)
+
+    X_all, Y_all = make_windows(y.reshape(-1, 1).ravel(), WINDOW)
 
     train_end = train_size - WINDOW
     X_train, Y_train = X_all[:train_end], Y_all[:train_end]
     X_test, Y_test = X_all[train_end:], Y_all[train_end:]
+    print(f"Shape X_test: {X_test.shape} | Shape Y_test: {Y_test.shape}")
 
     train_ds = TensorDataset(
         torch.from_numpy(X_train),
@@ -70,7 +66,7 @@ def solution() -> None:
     
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
     criterion = nn.MSELoss()
-    epochs = 200
+    epochs = 150
     losses : list = []
     for epoch in range(epochs):
         model.train()
@@ -85,7 +81,7 @@ def solution() -> None:
             total_loss += loss.item() * xb.size(0)
 
         losses.append(total_loss / len(train_ds))
-        if (epoch + 1) % 10 == 0:
+        if (epoch + 1) % 10 == 0 or (epoch + 1) == epoch:
             print(f"Эпоха {epoch + 1:4d}/{epochs}, Потери = {losses[-1]:.6f}")
 
 
@@ -95,12 +91,13 @@ def solution() -> None:
         test_pred_scaled = model(torch.from_numpy(X_test)).numpy().ravel()
 
 
-        test_pred = scaler_y.inverse_transform(test_pred_scaled.reshape(-1, 1)).ravel()
-        test_true = scaler_y.inverse_transform(Y_test.reshape(-1, 1)).ravel()
+        test_pred = test_pred_scaled.reshape(-1, 1)
+        test_true = Y_test.reshape(-1, 1)
 
-        train_pred = scaler_y.inverse_transform(train_pred_scaled.reshape(-1, 1)).ravel()
-        train_true = scaler_y.inverse_transform(Y_train.reshape(-1, 1)).ravel()
+        train_pred = train_pred_scaled.reshape(-1, 1)
+        train_true = Y_train.reshape(-1, 1)
 
+        print(f"Shape test_true: {test_true.shape} | Shape test_pred: {test_pred.shape}")
         test_rmse = root_mean_squared_error(test_true, test_pred)
         test_r2 = r2_score(test_true, test_pred)
 
