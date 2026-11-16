@@ -45,7 +45,6 @@ def solution() -> None:
     train_end = train_size - WINDOW
     X_train, Y_train = X_all[:train_end], Y_all[:train_end]
     X_test, Y_test = X_all[train_end:], Y_all[train_end:]
-    print(f"Shape X_test: {X_test.shape} | Shape Y_test: {Y_test.shape}")
 
     train_ds = TensorDataset(
         torch.from_numpy(X_train),
@@ -97,7 +96,6 @@ def solution() -> None:
         train_pred = train_pred_scaled.reshape(-1, 1)
         train_true = Y_train.reshape(-1, 1)
 
-        print(f"Shape test_true: {test_true.shape} | Shape test_pred: {test_pred.shape}")
         test_rmse = root_mean_squared_error(test_true, test_pred)
         test_r2 = r2_score(test_true, test_pred)
 
